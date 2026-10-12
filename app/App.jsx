@@ -6,7 +6,7 @@ import { Loader } from './Loader.jsx';
 import { Preview, Source } from './Preview.jsx';
 import { attr, defaultForm, partyName, parts as getParts } from './lib/upd.js';
 import { checkUpd, declaredEncoding, decodeXml, download, encodeXml, parseXml, serializeXml } from './lib/xml.js';
-import { Doc, Segmented } from './ui.jsx';
+import { Doc, GithubLink, Segmented } from './ui.jsx';
 
 /** Текст XML → открытый документ. Бросает понятную ошибку, если это не УПД. */
 function open(text, fileName) {
@@ -109,6 +109,7 @@ export function App() {
           <button type="button" class="small primary" onClick={() => download(downloadName, encodeXml(xml, file.encoding))}>
             Скачать XML
           </button>
+          <GithubLink />
         </div>
       </header>
 

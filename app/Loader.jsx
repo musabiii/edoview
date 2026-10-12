@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 
 import actSample from '../samples/act-dop.xml?raw';
 import updSample from '../samples/upd-schfdop.xml?raw';
-import { Notice, Segmented } from './ui.jsx';
+import { GithubLink, Notice, Segmented } from './ui.jsx';
 
 /**
  * Экран загрузки: файл (кнопка или перетаскивание) либо вставка текста XML.
@@ -22,6 +22,7 @@ export function Loader({ onOpen, onFile, error }) {
 
   return (
     <main class="loader">
+      <div class="loader-corner"><GithubLink /></div>
       <div class="loader-intro">
         <h1>Редактор УПД</h1>
         <p>Откройте XML универсального передаточного документа (формат 5.03), поправьте основные реквизиты и посмотрите печатную форму. Файл никуда не отправляется — всё работает в браузере.</p>

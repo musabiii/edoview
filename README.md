@@ -9,6 +9,17 @@ npm test
 npm run build   # dist/ — статический сайт
 ```
 
+### Docker и Coolify
+
+Образ собирается в два этапа: `npm ci`, тесты и `vite build`, затем `dist/` раздаёт `nginx:alpine` (gzip, вечный кэш для `assets/`).
+
+```bash
+docker build -t edoview .
+docker run -p 8080:80 edoview   # http://localhost:8080
+```
+
+В Coolify: Build Pack — **Dockerfile**, ветка `master`, Ports Exposes — **80**.
+
 ## Скриншоты
 
 Пример — `samples/upd-schfdop.xml` (УПД со статусом 1, НДС 22%) и `samples/act-dop.xml` (акт ИП без НДС). Оба открываются со стартовой страницы ссылками «Примеры».
