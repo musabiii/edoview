@@ -1,12 +1,6 @@
-import { isValidAccount, isValidBik, isValidCorrAccount, isValidInn, isValidKpp, isValidOgrnip } from '../lib/requisites.js';
+import { account, bik, corrAccount, innFl, innUl, kpp, ogrnip } from '../lib/checks.js';
 import { addressKind, attr, ensure, kid, PARTY_KINDS, partyKind, path, removeEl, setPartyKind, setTextAddress } from '../lib/upd.js';
 import { Attr, Field, Section, Segmented, useEdit } from '../ui.jsx';
-
-const innUl = (v) => (/^\d{10}$/.test(v) ? (isValidInn(v) ? null : 'Неверная контрольная сумма ИНН') : 'ИНН организации — 10 цифр');
-const innFl = (v) => (/^\d{12}$/.test(v) ? (isValidInn(v) ? null : 'Неверная контрольная сумма ИНН') : 'ИНН физлица/ИП — 12 цифр');
-const kpp = (v) => (isValidKpp(v) ? null : 'КПП — 9 символов, например 770101001');
-const ogrnip = (v) => (isValidOgrnip(v) ? null : 'ОГРНИП — 15 цифр с верной контрольной суммой');
-const bik = (v) => (isValidBik(v) ? null : 'БИК — 9 цифр');
 
 /** Пустые БанкРекв/СвБанк не оставляем в файле. */
 function pruneBank(party) {
@@ -154,7 +148,7 @@ function Bank({ party }) {
       <div class="row">
         <Attr
           el={bank} make={makeBank} after={after} name="НомерСчета" label="Расчётный счёт" kind="digits" maxLength={20}
-          check={(v) => (!/^\d{20}$/.test(v) ? 'Счёт — 20 цифр' : isValidBik(b) && !isValidAccount(v, b) ? 'Счёт не сходится с БИК (контрольный ключ)' : null)}
+          check={(v) => account(v, b)}
         />
         <Attr el={sv} make={makeSv} after={after} name="БИК" label="БИК" kind="digits" maxLength={9} check={bik} />
       </div>
@@ -162,7 +156,7 @@ function Bank({ party }) {
         <Attr el={sv} make={makeSv} after={after} name="НаимБанк" label="Банк" />
         <Attr
           el={sv} make={makeSv} after={after} name="КорСчет" label="Корр. счёт" kind="digits" maxLength={20}
-          check={(v) => (!/^\d{20}$/.test(v) ? 'Корр. счёт — 20 цифр' : isValidBik(b) && !isValidCorrAccount(v, b) ? 'Корр. счёт не сходится с БИК' : null)}
+          check={(v) => corrAccount(v, b)}
         />
       </div>
     </>

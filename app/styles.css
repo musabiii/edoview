@@ -14,6 +14,17 @@
   --ok: #1d7a43;
   --radius: 12px;
   --topbar-h: 64px;
+  --xml-tag: #1f4fbf;
+  --xml-attr: #8a3ffc;
+  --xml-value: #0f7b3e;
+  --xml-punct: #8a8d98;
+  --xml-comment: #8a8d98;
+  --xml-meta: #a3561f;
+  --xml-entity: #c2410c;
+  --xml-active: rgba(37, 87, 214, .06);
+  --xml-selection: rgba(37, 87, 214, .2);
+  --note-bg: #eef3ff;
+  --note-text: #3a4a7a;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -31,6 +42,17 @@
     --warn-bg: #332b12;
     --warn-border: #7c6420;
     --ok: #5fd08f;
+    --xml-tag: #7aa2ff;
+    --xml-attr: #c792ea;
+    --xml-value: #8bd49c;
+    --xml-punct: #7d8190;
+    --xml-comment: #7d8190;
+    --xml-meta: #e0a36b;
+    --xml-entity: #f59e6b;
+    --xml-active: rgba(112, 150, 255, .08);
+    --xml-selection: rgba(112, 150, 255, .28);
+    --note-bg: #1f2638;
+    --note-text: #aebce0;
     color-scheme: dark;
   }
 }
@@ -181,7 +203,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .preview-bar .field-hint { flex: 1; }
 .preview-bar .segmented { margin-right: auto; }
 .preview iframe { flex: 1; width: 100%; border: 0; background: #e9e9ec; }
-.source textarea { flex: 1; border: 0; border-radius: 0; resize: none; background: var(--surface); }
+.xml-editor { flex: 1; min-height: 0; }
+.xml-editor .cm-editor { height: 100%; }
+.cm-note { padding: 6px 0 2px; user-select: none; cursor: default; }
+/* Внешних margin у блочного виджета быть не должно: CodeMirror их не измеряет и путает координаты. */
+.cm-note span {
+  display: block; padding: 2px 8px;
+  border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
+  background: var(--note-bg); color: var(--note-text);
+  font: 12px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.hide-notes .cm-note { display: none; }
+.cm-glossary { padding: 4px 8px; max-width: 360px; font: 12.5px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.problems.has { color: var(--danger); border-color: var(--danger); }
 .status { padding: 16px; color: var(--muted); margin: 0; }
 .error-text { color: var(--danger); }
 

@@ -67,35 +67,79 @@ function fitWidth(iframe) {
   doc.head.append(style);
 }
 
-/** Исходный XML: можно поправить руками и применить. */
+/**
+ * Исходный XML в редакторе CodeMirror (грузится при первом открытии вкладки):
+ * подсветка, пояснения над элементами, проверки реквизитов. Правки применяются кнопкой.
+ */
 export function Source({ xml, onApply }) {
-  const [text, setText] = useState(xml);
+  const host = useRef(null);
+  const editor = useRef(null);
+  const latest = useRef(xml);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState(null);
+  const [problems, setProblems] = useState(0);
+  const [showNotes, setShowNotes] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [ready, setReady] = useState(false);
+
+  latest.current = xml;
 
   useEffect(() => {
-    if (!dirty) setText(xml);
+    let alive = true;
+    import('./xmlEditor.js').then(
+      ({ createXmlEditor }) => {
+        if (!alive) return;
+        editor.current = createXmlEditor(host.current, {
+          doc: latest.current,
+          onChange: (text) => setDirty(text !== latest.current),
+          onDiagnostics: setProblems,
+        });
+        setReady(true);
+      },
+      (e) => alive && setLoadError(`Не удалось загрузить редактор: ${e.message}`),
+    );
+    return () => {
+      alive = false;
+      editor.current?.destroy();
+      editor.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dirty) editor.current?.setText(xml);
   }, [xml]);
 
+  function apply() {
+    try {
+      onApply(editor.current.getText());
+      setDirty(false);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
   return (
-    <div class="source">
+    <div class={`source${showNotes ? '' : ' hide-notes'}`}>
       <div class="preview-bar">
-        <span class="field-hint">{dirty ? 'Текст изменён — примените, чтобы обновить форму' : 'XML с вашими правками'}</span>
+        <label class="check">
+          <input type="checkbox" checked={showNotes} onChange={(e) => setShowNotes(e.currentTarget.checked)} />
+          Пояснения
+        </label>
+        <button type="button" class={`small problems${problems ? ' has' : ''}`} disabled={!problems}
+          onClick={() => editor.current?.openProblems()} title="Список замечаний (Ctrl+Shift+M)">
+          {problems ? `Замечаний: ${problems}` : 'Замечаний нет'}
+        </button>
+        <span class="field-hint">{dirty ? 'Текст изменён — примените, чтобы обновить форму' : 'Наведите на тег или атрибут — появится расшифровка'}</span>
         {dirty && (
-          <button type="button" class="small" onClick={() => { setText(xml); setDirty(false); setError(null); }}>Отменить</button>
+          <button type="button" class="small" onClick={() => { editor.current?.setText(xml); setDirty(false); setError(null); }}>Отменить</button>
         )}
-        <button type="button" class="small primary" disabled={!dirty} onClick={() => {
-          try {
-            onApply(text);
-            setDirty(false);
-            setError(null);
-          } catch (e) {
-            setError(e.message);
-          }
-        }}>Применить</button>
+        <button type="button" class="small primary" disabled={!dirty} onClick={apply}>Применить</button>
       </div>
-      {error && <p class="status error-text">{error}</p>}
-      <textarea class="code" spellcheck={false} value={text} onInput={(e) => { setText(e.currentTarget.value); setDirty(true); }} />
+      {(error || loadError) && <p class="status error-text">{error ?? loadError}</p>}
+      <div class="xml-editor" ref={host}>
+        {!ready && !loadError && <p class="status">Загружаю редактор…</p>}
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useContext } from 'preact/hooks';
 import { createContext } from 'preact';
 
 import { normalizeNumber } from './lib/calc.js';
+import { date } from './lib/checks.js';
 import { attr, setAttr } from './lib/upd.js';
 
 /** { edit(fn) } — правка документа с перерисовкой. */
@@ -40,7 +41,7 @@ function problem(value, { required, check }) {
 export function Attr({ el, make, name, label, required, check, hint, wide, multiline, kind = 'text', after, ...rest }) {
   const edit = useEdit();
   const value = attr(el, name);
-  const error = problem(value, { required, check });
+  const error = problem(value, { required, check: check ?? (kind === 'date' ? date : undefined) });
 
   function write(raw) {
     edit(() => {

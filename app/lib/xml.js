@@ -2,6 +2,7 @@
 // декодируем по XML-декларации, а при сохранении пишем обратно в той же кодировке.
 
 import { canEncode, encodeCp1251 } from './cp1251.js';
+import { parserMessage } from './xmlInsight.js';
 
 /** Байты файла → строка: по BOM или по encoding из XML-декларации. */
 export function decodeXml(buffer) {
@@ -28,7 +29,7 @@ export function declaredEncoding(text) {
 export function parseXml(text) {
   const doc = new DOMParser().parseFromString(text.replace(/^﻿?\s*<\?xml[^>]*\?>/, ''), 'application/xml');
   const error = doc.querySelector('parsererror');
-  if (error) throw new Error(`Ошибка XML: ${error.textContent.trim().replace(/\s+/g, ' ').slice(0, 300)}`);
+  if (error) throw new Error(`Ошибка XML: ${parserMessage(error.textContent).slice(0, 300)}`);
   return doc;
 }
 

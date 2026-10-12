@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 
 import { VAT_RATES } from '../lib/calc.js';
+import { decimal, time } from '../lib/checks.js';
 import {
   addBasis, addRow, attr, ensure, insert, kid, kids, readRow, recalcRow, recalcTotals, removeEl, removeRow, setNoBasis,
 } from '../lib/upd.js';
@@ -27,7 +28,6 @@ const CURRENCIES = [
   ['398', 'Казахстанский тенге'],
 ];
 
-const time = (v) => (/^([01]\d|2[0-3])\.[0-5]\d\.[0-5]\d$/.test(v) ? null : 'Время в формате ЧЧ.ММ.СС');
 
 // ---------------------------------------------------------------- документ
 
@@ -250,7 +250,7 @@ export function Items({ parts }) {
   );
 }
 
-const num = (v) => (/^\d+(\.\d+)?$/.test(v) ? null : 'Число, например 1500.00');
+const num = decimal;
 
 function Row({ row, table, auto, after }) {
   const edit = useEdit();
