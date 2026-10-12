@@ -93,6 +93,7 @@ export function Source({ xml, onApply }) {
           doc: latest.current,
           onChange: (text) => setDirty(text !== latest.current),
           onDiagnostics: setProblems,
+          onFormatError: setError,
         });
         setReady(true);
       },
@@ -130,6 +131,8 @@ export function Source({ xml, onApply }) {
           onClick={() => editor.current?.openProblems()} title="Список замечаний (Ctrl+Shift+M)">
           {problems ? `Замечаний: ${problems}` : 'Замечаний нет'}
         </button>
+        <button type="button" class="small" disabled={!ready} onClick={() => editor.current?.format()}
+          title="Расставить отступы и переносы (Shift+Alt+F). Значения не меняются">Форматировать</button>
         <span class="field-hint">{dirty ? 'Текст изменён — примените, чтобы обновить форму' : 'Наведите на тег или атрибут — появится расшифровка'}</span>
         {dirty && (
           <button type="button" class="small" onClick={() => { editor.current?.setText(xml); setDirty(false); setError(null); }}>Отменить</button>

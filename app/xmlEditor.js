@@ -6,11 +6,12 @@ import { xml, xmlLanguage } from '@codemirror/lang-xml';
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import { diagnosticCount, linter, lintGutter, openLintPanel } from '@codemirror/lint';
 import { StateEffect, StateField } from '@codemirror/state';
-import { Decoration, EditorView, hoverTooltip, ViewPlugin, WidgetType } from '@codemirror/view';
+import { Decoration, EditorView, hoverTooltip, keymap, ViewPlugin, WidgetType } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { basicSetup } from 'codemirror';
 
 import { ATTRIBUTES, ELEMENTS } from './lib/glossary.js';
+import { formatXml } from './lib/xmlFormat.js';
 import { diagnostics, elements, notes, parserErrorPosition, parserMessage } from './lib/xmlInsight.js';
 
 // ---------------------------------------------------------------- оформление
@@ -157,11 +158,26 @@ const glossaryTooltip = hoverTooltip((view, pos, side) => {
 
 /**
  * @param {HTMLElement} parent
- * @param {{doc: string, onChange: (text: string) => void, onDiagnostics?: (count: number) => void}} opts
+ * @param {{doc: string, onChange: (text: string) => void, onDiagnostics?: (count: number) => void,
+ *   onFormatError?: (message: string) => void}} opts
  */
-export function createXmlEditor(parent, { doc, onChange, onDiagnostics }) {
+export function createXmlEditor(parent, { doc, onChange, onDiagnostics, onFormatError }) {
   let external = false;
   let count = -1;
+
+  /** Форматирование — обычная правка: попадает в историю (Ctrl+Z) и делает текст изменённым. */
+  function format(view) {
+    try {
+      const text = formatXml(view.state.doc.toString());
+      if (text !== view.state.doc.toString()) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+      onFormatError?.(null);
+    } catch (e) {
+      onFormatError?.(e.message);
+      if (e.pos !== undefined) view.dispatch({ selection: { anchor: e.pos }, scrollIntoView: true });
+    }
+    return true;
+  }
+
   const view = new EditorView({
     parent,
     doc,
@@ -176,6 +192,7 @@ export function createXmlEditor(parent, { doc, onChange, onDiagnostics }) {
       checks,
       lintGutter(),
       glossaryTooltip,
+      keymap.of([{ key: 'Shift-Alt-f', run: format }]),
       EditorView.updateListener.of((u) => {
         if (u.docChanged && !external) onChange(u.state.doc.toString());
         const n = diagnosticCount(u.state);
@@ -204,6 +221,7 @@ export function createXmlEditor(parent, { doc, onChange, onDiagnostics }) {
     },
     getText: () => view.state.doc.toString(),
     openProblems: () => openLintPanel(view),
+    format: () => format(view),
     destroy: () => view.destroy(),
   };
 }
