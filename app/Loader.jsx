@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 
 import actSample from '../samples/act-dop.xml?raw';
+import markSample from '../samples/upd-marking.xml?raw';
 import updSample from '../samples/upd-schfdop.xml?raw';
 import { GithubLink, Notice, Segmented } from './ui.jsx';
 
@@ -72,6 +73,8 @@ export function Loader({ onOpen, onFile, error }) {
       <p class="samples">
         Нет файла под рукой? Примеры:{' '}
         <button type="button" class="link" onClick={() => onOpen(updSample, 'upd-schfdop.xml')}>УПД со статусом 1 (с НДС)</button>
+        {' · '}
+        <button type="button" class="link" onClick={() => onOpen(markSample, 'upd-marking.xml')}>УПД с маркировкой</button>
         {' · '}
         <button type="button" class="link" onClick={() => onOpen(actSample, 'act-dop.xml')}>акт ИП без НДС (ДОП)</button>
       </p>

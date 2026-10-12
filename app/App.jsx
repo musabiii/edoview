@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 
-import { Basis, DocHeader, FileInfo, Items, Signers } from './editor/Sections.jsx';
+import { Basis, DocHeader, FileInfo, Items, Marking, Signers } from './editor/Sections.jsx';
 import { Party } from './editor/Party.jsx';
 import { Loader } from './Loader.jsx';
 import { Preview, Source } from './Preview.jsx';
+import { analyzeMarking, markingSummary, rowsFromDom } from './lib/marking.js';
 import { attr, defaultForm, partyName, parts as getParts } from './lib/upd.js';
 import { checkUpd, declaredEncoding, decodeXml, download, encodeXml, parseXml, serializeXml } from './lib/xml.js';
 import { Doc, GithubLink, Segmented } from './ui.jsx';
@@ -84,6 +85,7 @@ export function App() {
     fn();
     setRev((r) => r + 1);
   };
+  const marking = parts.table ? analyzeMarking(rowsFromDom(parts.table)) : null;
   const idFile = attr(parts.file, 'ИдФайл');
   const downloadName = idFile ? `${idFile}.xml` : file.fileName ?? 'upd.xml';
 
@@ -94,6 +96,7 @@ export function App() {
           <h1>
             УПД № {attr(parts.hdr, 'НомерДок') || '—'} от {attr(parts.hdr, 'ДатаДок') || '—'}
             {dirty && <span class="badge changed">изменён</span>}
+            {marking?.total.markedRows > 0 && <span class="badge mark" title="В документе есть коды маркировки">маркировка: {markingSummary(marking.total)}</span>}
           </h1>
           <div class="sub">{partyName(parts.sellers[0])} → {partyName(parts.buyers[0])}</div>
         </div>
@@ -119,7 +122,8 @@ export function App() {
           {parts.sellers.map((p, i) => <Party key={`s${i}`} party={p} title={parts.sellers.length > 1 ? `Продавец ${i + 1}` : 'Продавец'} />)}
           {parts.buyers.map((p, i) => <Party key={`b${i}`} party={p} title={parts.buyers.length > 1 ? `Покупатель ${i + 1}` : 'Покупатель'} />)}
           <Basis parts={parts} />
-          <Items parts={parts} />
+          <Items parts={parts} marking={marking} />
+          <Marking marking={marking} />
           <Signers parts={parts} />
           <FileInfo parts={parts} />
           <p class="field-hint encoding">Кодировка при сохранении: {file.encoding}. Остальные сведения файла (маркировка, транспортировка, доп. поля) сохраняются без изменений.</p>

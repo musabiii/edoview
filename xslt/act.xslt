@@ -51,6 +51,10 @@
               </p>
             </xsl:if>
             <xsl:call-template name="act"/>
+            <xsl:call-template name="marking-appendix">
+              <xsl:with-param name="table" select="$table"/>
+              <xsl:with-param name="title" select="concat('к акту № ', $hdr/@НомерДок, ' от ', $hdr/@ДатаДок)"/>
+            </xsl:call-template>
           </xsl:otherwise>
         </xsl:choose>
       </body>
@@ -301,6 +305,7 @@
 
   <xsl:template name="css">
     <xsl:call-template name="css-base"/>
+    <xsl:call-template name="css-appendix"/>
   </xsl:template>
 
 </xsl:stylesheet>

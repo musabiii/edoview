@@ -346,6 +346,102 @@
     </xsl:choose>
   </xsl:template>
 
+  <!-- ================================================================ приложение: маркировка -->
+
+  <!-- Коды маркировки, упаковок, РНПТ и номера в других ГИС по строкам — отдельной страницей.
+       В официальной форме УПД места для них нет, а при приёмке их сверяют. -->
+  <xsl:template name="marking-appendix">
+    <xsl:param name="table"/>
+    <xsl:param name="title"/>
+    <xsl:variable name="rows" select="$table/СведТов[ДопСведТов/НомСредИдентТов or ДопСведТов/СведПрослеж or ДопСведТов/СвГосСист]"/>
+    <xsl:if test="$rows">
+      <article class="page appendix">
+        <h2>Приложение. Средства идентификации товаров и прослеживаемость</h2>
+        <p class="subtitle"><xsl:value-of select="$title"/></p>
+        <table class="codes">
+          <thead>
+            <tr>
+              <th class="c">№ стр.</th>
+              <th>Наименование товара</th>
+              <th>Вид</th>
+              <th>Код</th>
+            </tr>
+          </thead>
+          <tbody>
+            <xsl:for-each select="$rows">
+              <xsl:variable name="row" select="."/>
+              <xsl:variable name="dop" select="ДопСведТов"/>
+              <xsl:for-each select="$dop/НомСредИдентТов/КИЗ | $dop/НомСредИдентТов/НомУпак | $dop/НомСредИдентТов/@ИдентТрансУпак | $dop/НомСредИдентТов/@КолВедМарк | $dop/СведПрослеж/@НомТовПрослеж | $dop/СвГосСист/ИдНомУчетЕд">
+                <tr>
+                  <xsl:if test="position() = 1"><xsl:attribute name="class">first</xsl:attribute></xsl:if>
+                  <td class="c">
+                    <xsl:if test="position() = 1"><xsl:value-of select="$row/@НомСтр"/></xsl:if>
+                  </td>
+                  <td>
+                    <xsl:if test="position() = 1">
+                      <xsl:value-of select="$row/@НаимТов"/>
+                      <div class="note">
+                        <xsl:if test="$dop/@ГТИН">
+                          <xsl:text>GTIN </xsl:text><xsl:value-of select="$dop/@ГТИН"/><xsl:text>; </xsl:text>
+                        </xsl:if>
+                        <xsl:text>кол-во </xsl:text>
+                        <xsl:value-of select="$row/@КолТов"/>
+                        <xsl:text> </xsl:text>
+                        <xsl:value-of select="$row/@НаимЕдИзм"/>
+                        <xsl:if test="$dop/НомСредИдентТов/КИЗ">
+                          <xsl:text>; КИЗ: </xsl:text>
+                          <xsl:value-of select="count($dop/НомСредИдентТов/КИЗ)"/>
+                        </xsl:if>
+                      </div>
+                    </xsl:if>
+                  </td>
+                  <td class="kind">
+                    <xsl:choose>
+                      <xsl:when test="local-name() = 'КИЗ'">КИЗ</xsl:when>
+                      <xsl:when test="local-name() = 'НомУпак'">Упаковка</xsl:when>
+                      <xsl:when test="local-name() = 'ИдентТрансУпак'">Трансп. упаковка</xsl:when>
+                      <xsl:when test="local-name() = 'КолВедМарк'">Кол-во в ед. маркировки</xsl:when>
+                      <xsl:when test="local-name() = 'НомТовПрослеж'">РНПТ</xsl:when>
+                      <xsl:otherwise><xsl:value-of select="../@НаимГосСист"/></xsl:otherwise>
+                    </xsl:choose>
+                  </td>
+                  <td class="code"><xsl:value-of select="."/></td>
+                </tr>
+              </xsl:for-each>
+            </xsl:for-each>
+          </tbody>
+        </table>
+        <p class="appendix-total">
+          <xsl:text>Всего кодов КИЗ: </xsl:text>
+          <xsl:value-of select="count($table/СведТов/ДопСведТов/НомСредИдентТов/КИЗ)"/>
+          <xsl:text>; упаковок: </xsl:text>
+          <xsl:value-of select="count($table/СведТов/ДопСведТов/НомСредИдентТов/НомУпак | $table/СведТов/ДопСведТов/НомСредИдентТов/@ИдентТрансУпак)"/>
+          <xsl:text>.</xsl:text>
+        </p>
+      </article>
+    </xsl:if>
+  </xsl:template>
+
+  <xsl:template name="css-appendix">
+    <xsl:text>
+.appendix { margin-top: 24px; }
+.appendix h2 { font-size: 11pt; margin: 0 0 2px; }
+.appendix .subtitle { margin: 0 0 8px; color: #444; font-size: 8.5pt; }
+table.codes { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 8pt; }
+.codes th, .codes td { border: 1px solid #000; padding: 2px 4px; vertical-align: top; text-align: left; }
+.codes th { background: #f3f3f3; font-weight: bold; }
+.codes .c { width: 12mm; text-align: center; }
+.codes .kind { width: 32mm; white-space: nowrap; }
+.codes .code { font-family: "Consolas", "Courier New", monospace; word-break: break-all; }
+.codes .note { color: #444; font-size: 7pt; }
+.codes tr.first td { border-top: 1.5px solid #000; }
+.appendix-total { margin: 6px 0 0; font-weight: bold; font-size: 8.5pt; }
+@media print {
+  .appendix { margin-top: 0; break-before: page; }
+}
+</xsl:text>
+  </xsl:template>
+
   <!-- ================================================================ стили -->
 
   <xsl:template name="css-base">

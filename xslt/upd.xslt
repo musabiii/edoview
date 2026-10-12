@@ -46,6 +46,10 @@
           </xsl:when>
           <xsl:otherwise>
             <xsl:call-template name="upd"/>
+            <xsl:call-template name="marking-appendix">
+              <xsl:with-param name="table" select="$table"/>
+              <xsl:with-param name="title" select="concat('к УПД № ', $hdr/@НомерДок, ' от ', $hdr/@ДатаДок)"/>
+            </xsl:call-template>
           </xsl:otherwise>
         </xsl:choose>
       </body>
@@ -288,7 +292,7 @@
           <th rowspan="2">Сумма налога, предъявляемая покупателю</th>
           <th rowspan="2">Стоимость товаров (работ, услуг), имущественных прав с налогом — всего</th>
           <th colspan="2">Страна происхождения товара</th>
-          <th rowspan="2">Регистрационный номер декларации на товары или партии товара</th>
+          <th rowspan="2">Регистрационный номер декларации на товары или партии товара, подлежащего прослеживаемости</th>
         </tr>
         <tr>
           <th>код</th>
@@ -342,7 +346,7 @@
             <td class="r"><xsl:call-template name="money"><xsl:with-param name="v" select="@СтТовУчНал"/></xsl:call-template></td>
             <td class="c"><xsl:value-of select="СвДТ[1]/@КодПроисх"/></td>
             <td class="c"><xsl:value-of select="ДопСведТов/КрНаимСтрПр[1]"/></td>
-            <td class="c"><xsl:value-of select="СвДТ[1]/@НомерДТ"/></td>
+            <td class="c"><xsl:value-of select="СвДТ[1]/@НомерДТ | ДопСведТов/СведПрослеж[1]/@НомТовПрослеж"/></td>
           </tr>
         </xsl:for-each>
         <tr class="total">
@@ -556,6 +560,7 @@
   <!-- ================================================================ стили -->
 
   <xsl:template name="css">
+    <xsl:call-template name="css-appendix"/>
     <xsl:text>
 @page { size: A4 landscape; margin: 8mm 8mm 8mm 10mm; }
 * { box-sizing: border-box; }

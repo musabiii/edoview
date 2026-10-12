@@ -4,6 +4,7 @@
 
 import { isNoVat, rowAmounts, totals, VAT_RATES } from './calc.js';
 import * as check from './checks.js';
+import { analyzeMarking, markingSummary } from './marking.js';
 
 /**
  * @typedef {{name: string, value: string, from: number, to: number}} XAttr  from/to — значение без кавычек
@@ -96,6 +97,37 @@ function* walk(els) {
   }
 }
 
+/** Строки таблицы для анализа маркировки; ref — {from, to} для подсветки. */
+export function markRowsFromTree(table) {
+  const span = (el) => ({ from: el.from, to: el.openTo });
+  const textSpan = (el) => (el.textFrom >= 0 ? { from: el.textFrom, to: el.textTo } : span(el));
+  return kidsOf(table, 'СведТов').map((row) => {
+    const dop = kid(row, 'ДопСведТов');
+    const gtin = at(dop, 'ГТИН');
+    return {
+      num: val(row, 'НомСтр'),
+      name: val(row, 'НаимТов'),
+      qty: val(row, 'КолТов'),
+      okei: val(row, 'ОКЕИ_Тов'),
+      gtin: gtin?.value ?? '',
+      ref: gtin ? { from: gtin.from, to: gtin.to } : span(row),
+      idents: kidsOf(dop, 'НомСредИдентТов').map((g) => {
+        const tr = at(g, 'ИдентТрансУпак');
+        return {
+          ref: span(g),
+          kiz: kidsOf(g, 'КИЗ').map((k) => ({ code: k.text, ref: textSpan(k) })),
+          packs: kidsOf(g, 'НомУпак').map((k) => ({ code: k.text, ref: textSpan(k) })),
+          transport: tr ? { code: tr.value, ref: { from: tr.from, to: tr.to } } : null,
+          kolVed: val(g, 'КолВедМарк'),
+          party: val(g, 'ПрПартМарк'),
+        };
+      }),
+      gos: kidsOf(dop, 'СвГосСист').map((g) => ({ system: val(g, 'НаимГосСист'), ids: kidsOf(g, 'ИдНомУчетЕд').map((x) => x.text) })),
+      trace: kidsOf(dop, 'СведПрослеж').map((t) => ({ rnpt: val(t, 'НомТовПрослеж') })),
+    };
+  });
+}
+
 // ---------------------------------------------------------------- пояснения
 
 function partyName(p) {
@@ -130,7 +162,30 @@ const NOTES = {
   СвПокуп: (el) => join('Покупатель (графы 6–6б)', short(partyName(el)), partyIds(el)),
   ДенИзм: (el) => `Валюта (графа 7): ${val(el, 'НаимОКВ') || val(el, 'КодОКВ')}`,
   ТаблСчФакт: (el) => `Таблица: строк ${kidsOf(el, 'СведТов').length}`,
-  СведТов: (el) => join(`Строка ${val(el, 'НомСтр')}`, short(val(el, 'НаимТов'), 50), val(el, 'СтТовУчНал') && `${val(el, 'СтТовУчНал')} с налогом`),
+  СведТов: (el) => {
+    const dop = kid(el, 'ДопСведТов');
+    const idents = kidsOf(dop, 'НомСредИдентТов');
+    const mark = idents.length && markingSummary({
+      kiz: idents.reduce((n, g) => n + kidsOf(g, 'КИЗ').length, 0),
+      packs: idents.reduce((n, g) => n + kidsOf(g, 'НомУпак').length, 0),
+      transport: idents.filter((g) => at(g, 'ИдентТрансУпак')).length,
+      kolVed: idents.filter((g) => at(g, 'КолВедМарк')).length,
+    });
+    const rnpt = kidsOf(dop, 'СведПрослеж').length;
+    return join(
+      `Строка ${val(el, 'НомСтр')}`,
+      short(val(el, 'НаимТов'), 50),
+      val(el, 'СтТовУчНал') && `${val(el, 'СтТовУчНал')} с налогом`,
+      mark && `маркировка: ${mark}`,
+      rnpt && 'прослеживаемость (РНПТ)',
+    );
+  },
+  НомСредИдентТов: (el) => join('Средства идентификации', markingSummary({
+    kiz: kidsOf(el, 'КИЗ').length,
+    packs: kidsOf(el, 'НомУпак').length,
+    transport: at(el, 'ИдентТрансУпак') ? 1 : 0,
+    kolVed: at(el, 'КолВедМарк') ? 1 : 0,
+  })),
   ВсегоОпл: (el) => {
     const tax = kid(kid(el, 'СумНалВсего'), 'СумНал')?.text;
     return join('Всего к оплате', `без налога ${val(el, 'СтТовБезНДСВсего') || '—'}`, tax ? `налог ${tax}` : 'без НДС', `с налогом ${val(el, 'СтТовУчНалВсего') || '—'}`);
@@ -279,7 +334,10 @@ export function diagnostics(roots) {
       }
     }
     if (el.name === 'СведТов') checkRow(el, out);
-    if (el.name === 'ТаблСчФакт') checkTotals(el, out);
+    if (el.name === 'ТаблСчФакт') {
+      checkTotals(el, out);
+      for (const i of analyzeMarking(markRowsFromTree(el)).issues) out.push({ ...i.ref, severity: i.severity, message: i.message });
+    }
   }
   return out;
 }

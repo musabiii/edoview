@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks';
 
 import { VAT_RATES } from '../lib/calc.js';
 import { decimal, time } from '../lib/checks.js';
+import { markingSummary } from '../lib/marking.js';
 import {
   addBasis, addRow, attr, ensure, insert, kid, kids, readRow, recalcRow, recalcTotals, removeEl, removeRow, setNoBasis,
 } from '../lib/upd.js';
@@ -201,7 +202,7 @@ export function Basis({ parts }) {
 
 const ROW_LIMIT = 30;
 
-export function Items({ parts }) {
+export function Items({ parts, marking }) {
   const edit = useEdit();
   const [auto, setAuto] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -217,6 +218,7 @@ export function Items({ parts }) {
     recalcTotals(table);
   };
   const taxTotal = kid(kid(all, 'СумНалВсего'), 'СумНал')?.textContent;
+  const markOf = new Map(marking?.rows.map((m) => [m.row.ref, m]));
 
   return (
     <Section title="Товары и услуги" badge={String(rows.length)}>
@@ -224,7 +226,7 @@ export function Items({ parts }) {
         <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.currentTarget.checked)} />
         Пересчитывать суммы и итоги автоматически
       </label>
-      {shown.map((row, i) => <Row key={i} row={row} table={table} auto={auto} after={after} />)}
+      {shown.map((row, i) => <Row key={i} row={row} table={table} auto={auto} after={after} mark={markOf.get(row)} />)}
       {rows.length > shown.length && (
         <button type="button" class="link" onClick={() => setShowAll(true)}>Показать все строки ({rows.length})</button>
       )}
@@ -252,14 +254,18 @@ export function Items({ parts }) {
 
 const num = decimal;
 
-function Row({ row, table, auto, after }) {
+function Row({ row, table, auto, after, mark }) {
   const edit = useEdit();
   const r = readRow(row);
   const taxEl = kid(kid(row, 'СумНал'), 'СумНал');
   return (
     <div class="item">
       <div class="item-head">
-        <span>Строка {r.num}</span>
+        <span>
+          Строка {r.num}
+          {mark?.marked && <span class="badge mark" title="Есть средства идентификации (НомСредИдентТов)">маркировка: {markingSummary(mark)}</span>}
+          {mark?.row.trace.length > 0 && <span class="badge mark">РНПТ</span>}
+        </span>
         <button type="button" class="link danger" onClick={() => edit(() => {
           removeRow(table, row);
           if (auto) recalcTotals(table);
@@ -289,6 +295,11 @@ function Row({ row, table, auto, after }) {
         <Attr el={row} name="СтТовУчНал" label="Стоимость с налогом" kind="number" check={num}
           after={() => auto && recalcTotals(table)} />
       </div>
+      {mark?.issues.length > 0 && (
+        <ul class="mark-issues">
+          {mark.issues.map((i, k) => <li key={k} class={i.severity}>{i.message.replace(/^Строка \d+: /, '')}</li>)}
+        </ul>
+      )}
     </div>
   );
 }
@@ -352,6 +363,64 @@ export function FileInfo({ parts }) {
         <Attr el={file} name="ВерсФорм" label="Версия формата" required readOnly />
         <Attr el={file} name="ВерсПрог" label="Версия программы" required />
       </div>
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------- маркировка
+
+const KIND_LABEL = { kiz: 'КИЗ', packs: 'Упаковка', transport: 'Трансп. упаковка', kolVed: 'Учёт' };
+
+/** Сводка по маркировке и прослеживаемости. Только просмотр: коды правятся во вкладке XML. */
+export function Marking({ marking }) {
+  if (!marking?.any) return null;
+  const { total } = marking;
+  const problems = marking.issues.filter((i) => i.severity !== 'info').length;
+  return (
+    <Section title="Маркировка" badge={problems ? `замечаний: ${problems}` : markingSummary(total)}>
+      <div class="totals">
+        <div><span>Строк с маркировкой</span><strong>{total.markedRows}</strong></div>
+        <div><span>Кодов КИЗ</span><strong>{total.kiz}</strong></div>
+        <div><span>Упаковок</span><strong>{total.packs + total.transport}</strong></div>
+      </div>
+      {(total.traceRows > 0 || total.gosRows > 0) && (
+        <p class="field-hint">
+          {total.traceRows > 0 && `Прослеживаемость (РНПТ): строк ${total.traceRows}. `}
+          {total.gosRows > 0 && `Учёт в других ГИС: строк ${total.gosRows}.`}
+        </p>
+      )}
+      {marking.rows.filter((m) => m.marked || m.row.trace.length || m.row.gos.length).map((m) => (
+        <details class="item mark-row" key={m.row.num}>
+          <summary>
+            <span class="mark-title">Строка {m.row.num}. {m.row.name || '—'}</span>
+            <span class="mark-sub">
+              {[
+                m.marked && markingSummary(m),
+                (m.row.gtin || m.gtins.length > 0) && `GTIN ${m.row.gtin || m.gtins.join(', ')}`,
+                m.row.qty && `кол-во ${m.row.qty}`,
+              ].filter(Boolean).join(' · ')}
+            </span>
+          </summary>
+          {m.issues.length > 0 && (
+            <ul class="mark-issues">
+              {m.issues.map((i, k) => <li key={k} class={i.severity}>{i.message.replace(/^Строка \d+: /, '')}</li>)}
+            </ul>
+          )}
+          <ol class="codes">
+            {m.row.idents.flatMap((g) => [
+              ...g.kiz.map((c) => ['kiz', c.code]),
+              ...g.packs.map((c) => ['packs', c.code]),
+              ...(g.transport ? [['transport', g.transport.code]] : []),
+              ...(g.kolVed ? [['kolVed', `количество в единицах маркировки: ${g.kolVed}`]] : []),
+            ]).map(([kind, code], k) => (
+              <li key={k}><span class="kind">{KIND_LABEL[kind]}</span><code>{code}</code></li>
+            ))}
+            {m.row.trace.map((t, k) => <li key={`t${k}`}><span class="kind">РНПТ</span><code>{t.rnpt}</code></li>)}
+            {m.row.gos.map((g, k) => <li key={`g${k}`}><span class="kind">{g.system || 'ГИС'}</span><code>{g.ids.join(', ')}</code></li>)}
+          </ol>
+        </details>
+      ))}
+      <p class="field-hint">Коды правятся во вкладке XML. Если кодов нет, это не значит, что товар не маркируется: продавец мог их не передать.</p>
     </Section>
   );
 }
