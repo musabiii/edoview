@@ -20,6 +20,29 @@ docker run -p 8080:80 edoview   # http://localhost:8080
 
 В Coolify: Build Pack — **Dockerfile**, ветка `master`, Ports Exposes — **80**.
 
+### Аналитика Umami
+
+Скрипт Umami вставляется в `index.html` только при сборке (`npm run build`) и только если заданы переменные:
+
+```bash
+UMAMI_URL=https://umami.musabii.dev
+UMAMI_WEBSITE_ID=58ad71b8-f5a8-48bf-82a3-daedb62f20b6
+UMAMI_DOMAINS=edoview.musabii.dev   # учитывать только этот домен
+```
+
+Локально — через `.env` (пример в `.env.example`). В `Dockerfile` эти значения заданы по умолчанию как `ARG`; в Coolify их можно переопределить build-переменными. В dev-режиме аналитики нет.
+
+События (`app/lib/analytics.js`), без содержимого документов:
+
+| Событие | Данные |
+|---|---|
+| `open` | `source`: file / drop / paste / sample; `function`: СЧФ / СЧФДОП / ДОП; `marking`: есть ли маркировка |
+| `open-error` | `source` |
+| `download` | `changed`: были ли правки; `encoding` |
+| `print` | `form`: upd / act |
+| `form`, `tab` | выбранная форма или вкладка |
+| `xml-format`, `xml-apply` | — |
+
 ## Скриншоты
 
 Примеры — `samples/upd-schfdop.xml` (УПД со статусом 1, НДС 22%), `samples/upd-marking.xml` (УПД с маркировкой) и `samples/act-dop.xml` (акт ИП без НДС). Все открываются со стартовой страницы ссылками «Примеры».
@@ -87,6 +110,7 @@ docker run -p 8080:80 edoview   # http://localhost:8080
 | `app/lib/xml.js` | Декодирование, разбор и сериализация XML с сохранением кодировки |
 | `app/xmlEditor.js` | XML-редактор на CodeMirror 6: подсветка, слой пояснений, проверки, подсказки |
 | `app/lib/xmlInsight.js` | Пояснения и проверки по синтаксическому дереву lezer (без DOM, тестируется в Node) |
+| `app/lib/analytics.js` | События Umami (без данных документов) |
 | `app/lib/xmlFormat.js` | Форматирование XML по дереву lezer (без изменения значений) |
 | `app/lib/marking.js` | Маркировка: разбор КИЗ (GS1), контрольные цифры GTIN/SSCC, проверки и сводка; адаптер DOM |
 | `app/lib/checks.js`, `app/lib/glossary.js` | Проверки реквизитов (общие для формы и XML) и расшифровка элементов/атрибутов |

@@ -4,6 +4,7 @@ import { Basis, DocHeader, FileInfo, Items, Marking, Signers } from './editor/Se
 import { Party } from './editor/Party.jsx';
 import { Loader } from './Loader.jsx';
 import { Preview, Source } from './Preview.jsx';
+import { track } from './lib/analytics.js';
 import { analyzeMarking, markingSummary, rowsFromDom } from './lib/marking.js';
 import { attr, defaultForm, partyName, parts as getParts } from './lib/upd.js';
 import { checkUpd, declaredEncoding, decodeXml, download, encodeXml, parseXml, serializeXml } from './lib/xml.js';
@@ -38,21 +39,27 @@ export function App() {
   const previewXml = useDebounced(xml, 300);
   const dirty = !!file && xml !== file.original;
 
-  function load(text, fileName) {
+  /** @param {'file'|'drop'|'paste'|'sample'|'reset'} [source] — для аналитики */
+  function load(text, fileName, source) {
     try {
       const f = open(text, fileName);
       setFile(f);
       setForm(defaultForm(f.doc));
       setError(null);
       setRev((r) => r + 1);
+      if (source && source !== 'reset') {
+        const p = getParts(f.doc);
+        track('open', { source, function: attr(p.doc, 'Функция') || '—', marking: !!p.table && analyzeMarking(rowsFromDom(p.table)).any });
+      }
     } catch (e) {
       setError(e.message);
+      if (source) track('open-error', { source });
     }
   }
 
-  async function loadFile(f) {
+  async function loadFile(f, source = 'file') {
     if (dirty && !confirm('Несохранённые правки пропадут. Открыть другой файл?')) return;
-    load(decodeXml(await f.arrayBuffer()), f.name);
+    load(decodeXml(await f.arrayBuffer()), f.name, source);
   }
 
   // Перетаскивание файла на любое место страницы.
@@ -61,7 +68,7 @@ export function App() {
     const drop = (e) => {
       e.preventDefault();
       const f = e.dataTransfer?.files[0];
-      if (f) loadFile(f);
+      if (f) loadFile(f, 'drop');
     };
     window.addEventListener('dragover', over);
     window.addEventListener('drop', drop);
@@ -107,9 +114,12 @@ export function App() {
             setError(null);
           }}>Открыть другой</button>
           <button type="button" class="small" disabled={!dirty} onClick={() => {
-            if (confirm('Вернуть документ к исходному состоянию?')) load(file.original, file.fileName);
+            if (confirm('Вернуть документ к исходному состоянию?')) load(file.original, file.fileName, 'reset');
           }}>Сбросить правки</button>
-          <button type="button" class="small primary" onClick={() => download(downloadName, encodeXml(xml, file.encoding))}>
+          <button type="button" class="small primary" onClick={() => {
+            download(downloadName, encodeXml(xml, file.encoding));
+            track('download', { changed: dirty, encoding: file.encoding });
+          }}>
             Скачать XML
           </button>
           <GithubLink />
@@ -130,10 +140,11 @@ export function App() {
         </section>
 
         <section class="viewer" aria-label="Просмотр">
-          <Segmented value={tab} options={[['preview', 'Печатная форма'], ['xml', 'XML']]} onChange={setTab} />
+          <Segmented value={tab} options={[['preview', 'Печатная форма'], ['xml', 'XML']]} onChange={(t) => { setTab(t); track('tab', { tab: t }); }} />
           {tab === 'preview'
-            ? <Preview xml={previewXml || xml} form={form} onForm={setForm} />
+            ? <Preview xml={previewXml || xml} form={form} onForm={(f) => { setForm(f); track('form', { form: f }); }} />
             : <Source xml={xml} onApply={(text) => {
+                track('xml-apply');
                 const f = open(text, file.fileName);
                 setFile({ ...f, original: file.original });
                 setRev((r) => r + 1);

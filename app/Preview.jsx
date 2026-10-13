@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 
+import { track } from './lib/analytics.js';
 import { renderHtml } from './lib/render.js';
 import { Segmented } from './ui.jsx';
 
@@ -31,7 +32,10 @@ export function Preview({ xml, form, onForm }) {
     <div class="preview">
       <div class="preview-bar">
         <Segmented value={form} options={[['upd', 'Форма УПД'], ['act', 'Акт']]} onChange={onForm} />
-        <button type="button" class="small" disabled={!html} onClick={() => frame.current.contentWindow.print()}>
+        <button type="button" class="small" disabled={!html} onClick={() => {
+          track('print', { form });
+          frame.current.contentWindow.print();
+        }}>
           Печать / PDF
         </button>
       </div>
@@ -131,7 +135,10 @@ export function Source({ xml, onApply }) {
           onClick={() => editor.current?.openProblems()} title="Список замечаний (Ctrl+Shift+M)">
           {problems ? `Замечаний: ${problems}` : 'Замечаний нет'}
         </button>
-        <button type="button" class="small" disabled={!ready} onClick={() => editor.current?.format()}
+        <button type="button" class="small" disabled={!ready} onClick={() => {
+            track('xml-format');
+            editor.current?.format();
+          }}
           title="Расставить отступы и переносы (Shift+Alt+F). Значения не меняются">Форматировать</button>
         <span class="field-hint">{dirty ? 'Текст изменён — примените, чтобы обновить форму' : 'Наведите на тег или атрибут — появится расшифровка'}</span>
         {dirty && (

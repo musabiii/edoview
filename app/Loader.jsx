@@ -7,7 +7,7 @@ import { GithubLink, Notice, Segmented } from './ui.jsx';
 
 /**
  * Экран загрузки: файл (кнопка или перетаскивание) либо вставка текста XML.
- * @param {{onOpen: (text: string, fileName?: string) => void, onFile: (f: File) => void, error?: string}} props
+ * @param {{onOpen: (text: string, fileName?: string, source?: string) => void, onFile: (f: File, source?: string) => void, error?: string}} props
  */
 export function Loader({ onOpen, onFile, error }) {
   const [tab, setTab] = useState('file');
@@ -18,7 +18,7 @@ export function Loader({ onOpen, onFile, error }) {
     e.preventDefault();
     setOver(false);
     const f = e.dataTransfer.files[0];
-    if (f) onFile(f);
+    if (f) onFile(f, 'drop');
   }
 
   return (
@@ -64,7 +64,7 @@ export function Loader({ onOpen, onFile, error }) {
             value={text}
             onInput={(e) => setText(e.currentTarget.value)}
           />
-          <button type="button" class="primary" disabled={!text.trim()} onClick={() => onOpen(text)}>Открыть</button>
+          <button type="button" class="primary" disabled={!text.trim()} onClick={() => onOpen(text, undefined, 'paste')}>Открыть</button>
         </div>
       )}
 
@@ -72,11 +72,11 @@ export function Loader({ onOpen, onFile, error }) {
 
       <p class="samples">
         Нет файла под рукой? Примеры:{' '}
-        <button type="button" class="link" onClick={() => onOpen(updSample, 'upd-schfdop.xml')}>УПД со статусом 1 (с НДС)</button>
+        <button type="button" class="link" onClick={() => onOpen(updSample, 'upd-schfdop.xml', 'sample')}>УПД со статусом 1 (с НДС)</button>
         {' · '}
-        <button type="button" class="link" onClick={() => onOpen(markSample, 'upd-marking.xml')}>УПД с маркировкой</button>
+        <button type="button" class="link" onClick={() => onOpen(markSample, 'upd-marking.xml', 'sample')}>УПД с маркировкой</button>
         {' · '}
-        <button type="button" class="link" onClick={() => onOpen(actSample, 'act-dop.xml')}>акт ИП без НДС (ДОП)</button>
+        <button type="button" class="link" onClick={() => onOpen(actSample, 'act-dop.xml', 'sample')}>акт ИП без НДС (ДОП)</button>
       </p>
     </main>
   );

@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Аналитика Umami (публичные значения, попадают в index.html). Переопределяются build-переменными.
+ARG UMAMI_URL=https://umami.musabii.dev
+ARG UMAMI_WEBSITE_ID=58ad71b8-f5a8-48bf-82a3-daedb62f20b6
+ARG UMAMI_DOMAINS=edoview.musabii.dev
 RUN npm test && npm run build
 
 # Раздача статики: nginx с gzip и вечным кэшем для assets/
