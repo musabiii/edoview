@@ -15,6 +15,11 @@ const SOURCES = { act: actXslt, upd: updXslt };
 
 let ready;
 
+/** Заранее подгрузить XSLT-движок (пока человек на стартовой странице). Ошибки не важны. */
+export function warmup() {
+  return loadPolyfill().catch(() => {});
+}
+
 function loadPolyfill() {
   ready ??= new Promise((resolve, reject) => {
     const script = document.createElement('script');

@@ -2,13 +2,53 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Редактор основных реквизитов XML УПД 5.03 и его печатная форма">
-  <title>Редактор УПД</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Редактор XML УПД онлайн — печатная форма, проверка реквизитов, маркировка | edoview</title>
+  <meta name="description" content="Откройте XML УПД 5.03 в браузере: печатная форма УПД и акта, правка реквизитов, проверка ИНН, КПП, счетов и НДС, коды маркировки. Бесплатно, файл не отправляется на сервер.">
+  <meta name="theme-color" content="#2557d6">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="canonical" href="%SITE_URL%/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="edoview">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:url" content="%SITE_URL%/">
+  <meta property="og:title" content="Редактор XML УПД онлайн — edoview">
+  <meta property="og:description" content="Печатная форма УПД и акта, правка и проверка реквизитов, маркировка. Файл не покидает браузер.">
+  <meta property="og:image" content="%SITE_URL%/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "edoview",
+    "url": "%SITE_URL%/",
+    "description": "Просмотр и правка XML универсального передаточного документа (УПД 5.03): печатная форма, проверка реквизитов, маркировка.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Any",
+    "inLanguage": "ru",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "RUB" }
+  }
+  </script>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app">
+    <!-- Статичный текст для поисковиков и браузеров без JavaScript; приложение заменяет его при запуске. -->
+    <main class="landing-main seo">
+      <h1>Просмотр и правка XML УПД онлайн</h1>
+      <p>edoview открывает XML универсального передаточного документа формата 5.03 прямо в браузере: показывает печатную форму УПД или акта, позволяет исправить реквизиты сторон, товары и суммы и скачать исправленный файл в исходной кодировке.</p>
+      <ul>
+        <li>Печатная форма УПД (статус 1 и 2) и акта — печать и сохранение в PDF.</li>
+        <li>Проверка ИНН, КПП, ОГРНИП, расчётных и корреспондентских счетов, дат, сумм и НДС.</li>
+        <li>Маркировка: коды КИЗ, упаковки, GTIN, приложение с кодами к печатной форме.</li>
+        <li>Конфиденциально: файл обрабатывается в браузере и не отправляется на сервер.</li>
+      </ul>
+      <noscript><p>Для работы редактора включите JavaScript.</p></noscript>
+    </main>
+  </div>
   <script type="module" src="/app/main.jsx"></script>
 </body>
 </html>

@@ -22,10 +22,34 @@ function umami(env) {
   };
 }
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), 'UMAMI_');
+/**
+ * Адрес сайта (SITE_URL) для canonical, og:url/og:image и sitemap.xml. Без него ссылки
+ * остаются относительными, а sitemap не создаётся.
+ */
+function site(env) {
+  const url = (env.SITE_URL ?? '').replace(/\/+$/, '');
   return {
-    plugins: [preact(), umami(env)],
+    name: 'site-url',
+    transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', url),
+    generateBundle() {
+      const robots = ['User-agent: *', 'Allow: /'];
+      if (url) {
+        robots.push(`Sitemap: ${url}/sitemap.xml`);
+        this.emitFile({
+          type: 'asset',
+          fileName: 'sitemap.xml',
+          source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${url}/</loc></url>\n</urlset>\n`,
+        });
+      }
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: `${robots.join('\n')}\n` });
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), ['UMAMI_', 'SITE_']);
+  return {
+    plugins: [preact(), umami(env), site(env)],
     server: { port: 5300, strictPort: true },
     preview: { port: 4300, strictPort: true },
   };

@@ -9,10 +9,16 @@ import {
 import { Attr, AttrSelect, Field, Section, Segmented, useEdit } from '../ui.jsx';
 
 const FUNCTIONS = [
-  ['СЧФДОП', 'СЧФДОП — счёт-фактура и передаточный документ (статус 1)'],
-  ['ДОП', 'ДОП — только передаточный документ / акт (статус 2)'],
-  ['СЧФ', 'СЧФ — только счёт-фактура'],
+  ['СЧФДОП', 'СЧФДОП · статус 1'],
+  ['ДОП', 'ДОП · статус 2'],
+  ['СЧФ', 'СЧФ · счёт-фактура'],
 ];
+
+const FUNCTION_HINTS = {
+  СЧФДОП: 'Счёт-фактура и передаточный документ (акт) — для плательщиков НДС',
+  ДОП: 'Только передаточный документ или акт, без счёта-фактуры',
+  СЧФ: 'Только счёт-фактура',
+};
 
 const DOC_TITLES = [
   'Документ об отгрузке товаров (выполнении работ), передаче имущественных прав (документ об оказании услуг)',
@@ -33,13 +39,11 @@ const CURRENCIES = [
 // ---------------------------------------------------------------- документ
 
 export function DocHeader({ parts }) {
-  const edit = useEdit();
   const { doc, hdr } = parts;
-  const ispr = kid(hdr, 'ИспрДок');
   const cur = kid(hdr, 'ДенИзм');
   return (
-    <Section title="Документ" badge={attr(doc, 'Функция')}>
-      <AttrSelect el={doc} name="Функция" label="Функция" options={FUNCTIONS} required wide />
+    <Section id="doc" title="Документ" badge={attr(doc, 'Функция')}>
+      <AttrSelect el={doc} name="Функция" label="Функция" options={FUNCTIONS} required wide hint={FUNCTION_HINTS[attr(doc, 'Функция')]} />
       <div class="row">
         <Attr el={hdr} name="НомерДок" label="Номер документа" required />
         <Attr el={hdr} name="ДатаДок" label="Дата документа" required kind="date" />
@@ -51,9 +55,6 @@ export function DocHeader({ parts }) {
         <option value="Товарная накладная" />
         <option value="Универсальный передаточный документ" />
       </datalist>
-      <Attr el={doc} name="ПоФактХЖ" label="Наименование документа по факту хозяйственной жизни" wide multiline list="fhzh" />
-      <datalist id="fhzh">{DOC_TITLES.map((t) => <option key={t} value={t} />)}</datalist>
-
       <div class="row">
         <AttrSelect
           el={cur} make={() => ensure(hdr, 'ДенИзм')} name="КодОКВ" label="Валюта" required options={CURRENCIES.map(([c, n]) => [c, `${c} — ${n}`])}
@@ -64,6 +65,21 @@ export function DocHeader({ parts }) {
         />
         <Attr el={cur} name="КурсВал" label="Курс валюты" kind="number" hint="Только для иностранной валюты" />
       </div>
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------- дополнительно
+
+/** Редко меняемые реквизиты: исправление, составитель, наименование по ФХЖ, сведения о файле. */
+export function Extra({ parts }) {
+  const edit = useEdit();
+  const { doc, hdr, file } = parts;
+  const ispr = kid(hdr, 'ИспрДок');
+  return (
+    <Section id="extra" title="Дополнительно" open={false}>
+      <Attr el={doc} name="ПоФактХЖ" label="Наименование документа по факту хозяйственной жизни" wide multiline list="fhzh" />
+      <datalist id="fhzh">{DOC_TITLES.map((t) => <option key={t} value={t} />)}</datalist>
 
       <h3>Исправление</h3>
       <div class="row">
@@ -82,6 +98,14 @@ export function DocHeader({ parts }) {
         <Attr el={doc} name="ВремИнфПр" label="Время формирования" required check={time} placeholder="ЧЧ.ММ.СС" />
       </div>
       <Attr el={doc} name="НаимЭконСубСост" label="Экономический субъект — составитель" wide multiline />
+
+      <h3>Файл</h3>
+      <Attr el={file} name="ИдФайл" label="Идентификатор файла (ИдФайл)" required wide multiline
+        hint="Имя файла при скачивании. В нём закодированы ID участников ЭДО, дата и UUID — меняйте осознанно." />
+      <div class="row">
+        <Attr el={file} name="ВерсФорм" label="Версия формата" required readOnly />
+        <Attr el={file} name="ВерсПрог" label="Версия программы" required />
+      </div>
     </Section>
   );
 }
@@ -119,7 +143,7 @@ export function Basis({ parts }) {
   const shipDocs = kids(hdr, 'ДокПодтвОтгрНом');
 
   return (
-    <Section title="Передача и основание">
+    <Section id="basis" title="Передача и основание">
       <Attr el={per} make={makePer} name="СодОпер" label="Содержание операции" required={fn !== 'СЧФ'} wide multiline
         hint="Например, «Товары переданы» или «Услуги оказаны в полном объеме»" />
       <Field label="Дата отгрузки / оказания услуг" wide>
@@ -207,7 +231,7 @@ export function Items({ parts, marking }) {
   const [auto, setAuto] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const { table } = parts;
-  if (!table) return <Section title="Товары и услуги"><p class="field-hint">В документе нет таблицы (ТаблСчФакт).</p></Section>;
+  if (!table) return <Section id="items" title="Товары и услуги"><p class="field-hint">В документе нет таблицы (ТаблСчФакт).</p></Section>;
 
   const rows = kids(table, 'СведТов');
   const all = kid(table, 'ВсегоОпл');
@@ -221,7 +245,7 @@ export function Items({ parts, marking }) {
   const markOf = new Map(marking?.rows.map((m) => [m.row.ref, m]));
 
   return (
-    <Section title="Товары и услуги" badge={String(rows.length)}>
+    <Section id="items" title="Товары и услуги" badge={String(rows.length)}>
       <label class="check">
         <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.currentTarget.checked)} />
         Пересчитывать суммы и итоги автоматически
@@ -319,7 +343,7 @@ export function Signers({ parts }) {
   const edit = useEdit();
   const { doc, signers } = parts;
   return (
-    <Section title="Подписант" badge={signers.length > 1 ? String(signers.length) : null}>
+    <Section id="signers" title="Подписант" badge={signers.length > 1 ? String(signers.length) : null}>
       {signers.map((s, i) => {
         const fio = kid(s, 'ФИО');
         return (
@@ -353,20 +377,6 @@ export function Signers({ parts }) {
 
 // ---------------------------------------------------------------- файл
 
-export function FileInfo({ parts }) {
-  const { file } = parts;
-  return (
-    <Section title="Файл" open={false}>
-      <Attr el={file} name="ИдФайл" label="Идентификатор файла (ИдФайл)" required wide multiline
-        hint="Имя файла при скачивании. В нём закодированы ID участников ЭДО, дата и UUID — меняйте осознанно." />
-      <div class="row">
-        <Attr el={file} name="ВерсФорм" label="Версия формата" required readOnly />
-        <Attr el={file} name="ВерсПрог" label="Версия программы" required />
-      </div>
-    </Section>
-  );
-}
-
 // ---------------------------------------------------------------- маркировка
 
 const KIND_LABEL = { kiz: 'КИЗ', packs: 'Упаковка', transport: 'Трансп. упаковка', kolVed: 'Учёт' };
@@ -377,7 +387,7 @@ export function Marking({ marking }) {
   const { total } = marking;
   const problems = marking.issues.filter((i) => i.severity !== 'info').length;
   return (
-    <Section title="Маркировка" badge={problems ? `замечаний: ${problems}` : markingSummary(total)}>
+    <Section id="marking" title="Маркировка" badge={problems ? `замечаний: ${problems}` : markingSummary(total)}>
       <div class="totals">
         <div><span>Строк с маркировкой</span><strong>{total.markedRows}</strong></div>
         <div><span>Кодов КИЗ</span><strong>{total.kiz}</strong></div>

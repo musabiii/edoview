@@ -85,6 +85,26 @@ export function elements(text, tree) {
   return roots;
 }
 
+/**
+ * То же дерево из DOM документа — чтобы запускать проверки из формы без парсера редактора.
+ * Позиций в тексте здесь нет (from/to = 0): форме нужны раздел и сообщение.
+ * @param {Document} doc
+ * @returns {XEl[]}
+ */
+export function elementsFromDom(doc) {
+  const conv = (node, parent) => {
+    const el = {
+      name: node.localName, from: 0, to: 0, openTo: 0, parent,
+      attrs: [...node.attributes].map((a) => ({ name: a.name, value: a.value, from: 0, to: 0 })),
+      children: [], text: '', textFrom: -1, textTo: -1,
+    };
+    el.children = [...node.children].map((c) => conv(c, el));
+    if (!node.children.length) el.text = node.textContent.trim();
+    return el;
+  };
+  return doc.documentElement ? [conv(doc.documentElement, null)] : [];
+}
+
 const kid = (el, name) => el?.children.find((c) => c.name === name) ?? null;
 const kidsOf = (el, name) => el?.children.filter((c) => c.name === name) ?? [];
 const at = (el, name) => el?.attrs.find((a) => a.name === name) ?? null;
@@ -297,6 +317,30 @@ function checkTotals(table, out) {
   }
 }
 
+/** Атрибуты Документа/СвСчФакт, которые в форме лежат в «Дополнительно». */
+const EXTRA_ATTRS = new Set(['ПоФактХЖ', 'ДатаИнфПр', 'ВремИнфПр', 'НаимЭконСубСост', 'КНД', 'ИдФайл', 'ВерсФорм', 'ВерсПрог']);
+
+/**
+ * Раздел формы, к которому относится замечание: seller-0, buyer-0, items, basis, signers, doc, extra.
+ * @param {XEl} el
+ * @param {string} [attrName]
+ */
+export function sectionOf(el, attrName) {
+  for (let e = el; e; e = e.parent) {
+    if (e.name === 'СвПрод' || e.name === 'СвПокуп') {
+      const i = e.parent ? e.parent.children.filter((c) => c.name === e.name).indexOf(e) : 0;
+      return `${e.name === 'СвПрод' ? 'seller' : 'buyer'}-${i}`;
+    }
+    if (e.name === 'ТаблСчФакт') return 'items';
+    if (e.name === 'СвПродПер' || e.name === 'ДокПодтвОтгрНом') return 'basis';
+    if (e.name === 'Подписант') return 'signers';
+    if (e.name === 'ИспрДок') return 'extra';
+    if (e.name === 'ГрузОт' || e.name === 'ГрузПолуч' || e.name === 'СвПРД') return 'basis';
+  }
+  if (el.name === 'Файл' || (attrName && EXTRA_ATTRS.has(attrName))) return 'extra';
+  return 'doc';
+}
+
 const REQUIRED = {
   Файл: ['ИдФайл', 'ВерсФорм', 'ВерсПрог'],
   Документ: ['КНД', 'Функция', 'ДатаИнфПр', 'ВремИнфПр'],
@@ -325,18 +369,20 @@ export function diagnostics(roots) {
   for (const el of walk(roots)) {
     for (const a of el.attrs) {
       const msg = checkAttr(el, a);
-      if (msg) out.push({ from: a.from, to: Math.max(a.to, a.from), severity: 'error', message: msg });
+      if (msg) out.push({ from: a.from, to: Math.max(a.to, a.from), severity: 'error', message: msg, section: sectionOf(el, a.name), attr: a.name });
     }
     for (const name of REQUIRED[el.name] ?? []) {
       const a = at(el, name);
       if (!a || !a.value) {
-        out.push({ from: el.from, to: el.openTo, severity: 'error', message: `${el.name}: не заполнен обязательный атрибут ${name}` });
+        out.push({ from: el.from, to: el.openTo, severity: 'error', message: `${el.name}: не заполнен обязательный атрибут ${name}`, section: sectionOf(el, name), attr: name });
       }
     }
+    const start = out.length;
     if (el.name === 'СведТов') checkRow(el, out);
+    if (el.name === 'ТаблСчФакт') checkTotals(el, out);
+    for (let i = start; i < out.length; i++) out[i].section ??= 'items';
     if (el.name === 'ТаблСчФакт') {
-      checkTotals(el, out);
-      for (const i of analyzeMarking(markRowsFromTree(el)).issues) out.push({ ...i.ref, severity: i.severity, message: i.message });
+      for (const i of analyzeMarking(markRowsFromTree(el)).issues) out.push({ ...i.ref, severity: i.severity, message: i.message, section: 'marking' });
     }
   }
   return out;

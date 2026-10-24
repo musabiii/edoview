@@ -14,6 +14,10 @@
   --ok: #1d7a43;
   --radius: 12px;
   --topbar-h: 64px;
+  --tabs-h: 0px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, .16);
+  --ok-bg: #e8f5ee;
   --xml-tag: #1f4fbf;
   --xml-attr: #8a3ffc;
   --xml-value: #0f7b3e;
@@ -55,6 +59,9 @@
     --note-bg: #1f2638;
     --note-text: #aebce0;
     --warn-text: #f0b45a;
+    --ok-bg: #16301f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
 }
@@ -72,15 +79,23 @@ h3 { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--muted); te
 
 /* ---------------------------------------------------------------- шапка */
 .topbar {
-  position: sticky; top: 0; z-index: 5;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  min-height: var(--topbar-h); padding: 8px 16px;
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+  height: var(--topbar-h); padding: 0 16px;
   background: var(--surface); border-bottom: 1px solid var(--border);
 }
 .topbar-title { flex: 1; min-width: 0; }
-.topbar h1 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar h1 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; white-space: nowrap; min-width: 0; }
+.topbar .doc-title { overflow: hidden; text-overflow: ellipsis; }
 .topbar .sub { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.mobile-only { display: none !important; }
+.pointer-coarse { display: none; }
+@media (pointer: coarse) {
+  .pointer-fine { display: none; }
+  .pointer-coarse { display: inline; }
+}
 
 .github {
   display: inline-flex; align-items: center; justify-content: center;
@@ -102,13 +117,21 @@ button.primary, .btn.primary { background: var(--accent); border-color: var(--ac
 button.link { border: 0; background: none; color: var(--accent); padding: 0 2px; min-height: 28px; justify-self: start; }
 button.link.danger { color: var(--danger); }
 button.small, .btn.small { min-height: 34px; padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+button.danger-solid { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+button.icon-btn, .btn.icon-btn { min-height: 34px; min-width: 34px; padding: 0; border-color: transparent; background: none; color: var(--muted); }
+button.icon-btn:hover { color: var(--text); background: var(--surface-2); }
 button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, .btn:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse) {
+  button.link { min-height: 40px; padding: 0 8px; }
+}
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.segmented { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
-.segmented button { flex: 1; border: 0; border-radius: 0; min-height: 36px; background: var(--surface-2); white-space: nowrap; }
-.segmented button + button { border-left: 1px solid var(--border); }
-.segmented button.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+/* Переключатели нейтральные: акцентный цвет оставляем главным действиям. */
+.segmented { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); flex-shrink: 0; }
+.segmented button { flex: 1; border: 0; border-radius: 7px; min-height: 30px; padding: 4px 12px; background: none; color: var(--muted); white-space: nowrap; font-size: 13px; }
+.segmented button:hover { color: var(--text); }
+.segmented button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
 
 .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
 .badge.mark { color: var(--accent); border-color: var(--accent); background: var(--note-bg); margin-left: 6px; font-weight: 500; }
@@ -124,21 +147,52 @@ button:disabled { opacity: .45; cursor: default; }
 .codes code { font: 12px ui-monospace, "Cascadia Mono", Consolas, monospace; word-break: break-all; }
 .badge.changed { color: #8a5a00; background: var(--warn-bg); border-color: var(--warn-border); }
 
-/* ---------------------------------------------------------------- загрузка */
-.loader { max-width: 720px; margin: 0 auto; padding: 40px 16px; display: grid; gap: 16px; }
-.loader-intro h1 { margin: 0 0 6px; font-size: 26px; }
-.loader-intro p { margin: 0; color: var(--muted); }
+/* ---------------------------------------------------------------- стартовая страница */
+.landing { min-height: 100dvh; display: flex; flex-direction: column; }
+.landing-top { display: flex; align-items: center; justify-content: space-between; max-width: 1040px; width: 100%; margin: 0 auto; padding: 14px 16px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--accent); }
+.landing-main { flex: 1; width: 100%; max-width: 1040px; margin: 0 auto; padding: 8px 16px 48px; display: grid; gap: 48px; }
+.hero { max-width: 720px; width: 100%; margin: 0 auto; display: grid; gap: 14px; }
+.hero h1 { margin: 16px 0 0; font-size: clamp(26px, 4vw, 36px); line-height: 1.15; letter-spacing: -.01em; text-align: center; }
+.lead { margin: 0 0 10px; color: var(--muted); font-size: 16px; text-align: center; }
 .dropzone {
   display: grid; justify-items: center; gap: 10px; text-align: center;
-  padding: 48px 16px; border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 40px 16px; border: 2px dashed var(--border); border-radius: 16px;
   background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s;
 }
 .dropzone.over, .dropzone:hover { border-color: var(--accent); }
-.dropzone.over { background: var(--surface-2); }
-.dropzone-icon { font-size: 36px; color: var(--accent); line-height: 1; }
+.dropzone.over { background: var(--note-bg); }
+.dropzone-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--note-bg); color: var(--accent); }
+.dropzone strong { font-size: 16px; }
+.dropzone .btn.primary { min-height: 44px; padding: 8px 22px; font-size: 15px; }
+.dropzone .field-hint { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; }
+button.paste-link { justify-self: center; }
 .paste { display: grid; gap: 10px; }
-.paste button { justify-self: start; }
-.samples { margin: 0; font-size: 14px; color: var(--muted); }
+
+.samples h2 { margin: 0 0 14px; font-size: 18px; text-align: center; }
+.sample-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.sample-card {
+  display: grid; gap: 6px; align-content: start; justify-items: start; text-align: left;
+  padding: 16px; min-height: 0; border-radius: var(--radius); background: var(--surface);
+  border: 1px solid var(--border); box-shadow: var(--shadow); transition: border-color .15s, transform .15s;
+}
+.sample-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.sample-title { font-weight: 600; font-size: 15px; }
+.sample-text { color: var(--muted); font-size: 13.5px; }
+.sample-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { padding: 1px 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sample-cta { margin-top: 4px; color: var(--accent); font-weight: 600; font-size: 13.5px; }
+
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 24px; }
+.feature h3 { margin: 10px 0 4px; font-size: 15px; color: var(--text); text-transform: none; letter-spacing: 0; }
+.feature p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.feature-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--note-bg); color: var(--accent); }
+
+.site-footer {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center;
+  padding: 20px 16px 28px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; text-align: center;
+}
+.site-footer span:first-child { font-weight: 600; color: var(--text); }
 
 textarea.code {
   font: 12.5px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -156,16 +210,18 @@ textarea.code {
   height: calc(100dvh - var(--topbar-h) - 32px);
   display: flex; flex-direction: column; gap: 8px; min-width: 0;
 }
-.viewer > .segmented { align-self: flex-start; }
+.viewer-tabs .segmented { align-self: flex-start; }
+.viewer > .desk-only { display: block; }
 .encoding { margin: 0 4px 24px; }
 
 @media (max-width: 1000px) {
   .workspace { grid-template-columns: 1fr; }
-  .viewer { position: static; height: 80vh; }
 }
 
 /* ---------------------------------------------------------------- карточки */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); scroll-margin-top: calc(var(--topbar-h) + 56px); }
+.card.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: 0 0 0 3px transparent; } }
 .card > summary {
   display: flex; align-items: center; gap: 8px;
   padding: 12px 16px; cursor: pointer; list-style: none; user-select: none;
@@ -241,4 +297,104 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .topbar h1 { font-size: 15px; }
   .workspace { padding: 12px; }
   .totals { grid-template-columns: 1fr; }
+}
+
+/* ---------------------------------------------------------------- навигация по разделам */
+.section-nav {
+  position: sticky; top: var(--topbar-h); z-index: 4;
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -4px; padding: 4px 4px 8px; background: var(--bg);
+}
+.section-nav::-webkit-scrollbar { display: none; }
+.section-nav button {
+  min-height: 30px; padding: 2px 10px; border-radius: 99px; font-size: 12.5px; white-space: nowrap;
+  background: var(--surface); color: var(--muted);
+}
+.section-nav button:hover { color: var(--text); border-color: var(--muted); }
+.count {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 2px;
+  border-radius: 99px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- замечания и меню */
+.popover-host { position: relative; }
+.popover-host > summary { list-style: none; }
+.popover-host > summary::-webkit-details-marker { display: none; }
+.popover {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20;
+  min-width: 240px; max-width: min(420px, calc(100vw - 24px)); max-height: 60vh; overflow: auto;
+  padding: 6px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  display: grid; gap: 2px;
+}
+.popover > button, .popover > a {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; text-align: left; width: 100%;
+  border: 0; border-radius: 8px; min-height: 40px; padding: 6px 10px; background: none; color: var(--text); font-size: 13.5px; text-decoration: none;
+}
+.popover > button:hover, .popover > a:hover { background: var(--surface-2); }
+.issues-btn { cursor: pointer; }
+.issues-btn.has-errors { color: var(--danger); border-color: var(--danger); background: var(--danger-bg); }
+.issues-btn.has-warnings { color: var(--warn-text); border-color: var(--warn-border); background: var(--warn-bg); }
+.issue-section { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.issue.error .issue-text { color: var(--danger); }
+.issue.warning .issue-text { color: var(--warn-text); }
+.issues-ok { display: inline-flex; align-items: center; gap: 4px; color: var(--ok); font-size: 13px; font-weight: 500; padding: 0 6px; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- диалог и уведомление */
+.dialog {
+  width: min(460px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg);
+}
+.dialog::backdrop { background: rgba(10, 12, 20, .45); }
+.dialog h2 { margin: 0 0 8px; font-size: 17px; }
+.dialog p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.dialog-list { margin: 0 0 12px; padding-left: 18px; font-size: 13.5px; display: grid; gap: 4px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + var(--tabs-h)); transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 14px; border-radius: 12px; background: var(--text); color: var(--bg); box-shadow: var(--shadow-lg); font-size: 13.5px;
+}
+.toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toast .icon-btn { color: inherit; }
+
+/* ---------------------------------------------------------------- плашка примера */
+.sample-banner {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 12px 16px 0; padding: 8px 8px 8px 14px; border-radius: var(--radius);
+  background: var(--note-bg); color: var(--note-text); border: 1px solid var(--border); font-size: 14px;
+}
+.sample-banner > span { flex: 1; min-width: 200px; }
+.sample-banner .icon-btn { color: inherit; }
+
+/* ---------------------------------------------------------------- нижние вкладки (телефон) */
+.mobile-tabs { display: none; }
+
+@media (max-width: 1000px) {
+  :root { --topbar-h: 56px; --tabs-h: 60px; }
+  .desk-only { display: none !important; }
+  .mobile-only { display: revert !important; }
+  .topbar { padding: 0 8px 0 12px; gap: 8px; }
+  .topbar h1 { font-size: 15px; }
+  .topbar .sub { display: none; }
+  .issues-ok { font-size: 0; padding: 0; }
+  .issues-ok svg { width: 18px; height: 18px; }
+  .issues-btn { font-size: 0; gap: 0; padding: 4px 8px; }
+  .issues-btn::after { content: attr(data-count); font-size: 13px; margin-left: 4px; }
+  .workspace { padding-bottom: calc(var(--tabs-h) + 16px); }
+  .workspace[data-pane="edit"] .viewer { display: none; }
+  .workspace[data-pane="view"] .editor { display: none; }
+  .viewer { position: static; height: calc(100dvh - var(--topbar-h) - var(--tabs-h) - 24px); }
+  .mobile-tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    display: flex; height: var(--tabs-h); padding-bottom: env(safe-area-inset-bottom);
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  .mobile-tabs button {
+    position: relative; flex: 1; flex-direction: column; gap: 2px; min-height: 0;
+    border: 0; border-radius: 0; background: none; color: var(--muted); font-size: 11.5px;
+  }
+  .mobile-tabs button.on { color: var(--accent); font-weight: 600; }
+  .mobile-tabs .count { position: absolute; top: 6px; left: calc(50% + 6px); }
+  .sample-banner { margin: 8px 12px 0; }
 }

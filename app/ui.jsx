@@ -106,9 +106,9 @@ function fromIso(s) {
   return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
 }
 
-export function Section({ title, badge, open = true, actions, children }) {
+export function Section({ id, title, badge, open = true, actions, children }) {
   return (
-    <details class="card" open={open}>
+    <details class="card" id={id} open={open}>
       <summary>
         <span class="card-title">{title}</span>
         {badge && <span class="badge">{badge}</span>}

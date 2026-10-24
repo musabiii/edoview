@@ -28,6 +28,15 @@ export function Preview({ xml, form, onForm }) {
     return () => { alive = false; };
   }, [xml, form]);
 
+  // Ширина панели меняется (окно, вкладки на телефоне) — подгоняем масштаб формы.
+  useEffect(() => {
+    const el = frame.current;
+    if (!el) return undefined;
+    const ro = new ResizeObserver(() => fitWidth(el));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [html]);
+
   return (
     <div class="preview">
       <div class="preview-bar">
@@ -62,13 +71,18 @@ export function Preview({ xml, form, onForm }) {
  * под ширину iframe. Только @media screen — печать идёт в натуральном размере.
  */
 function fitWidth(iframe) {
-  const doc = iframe.contentDocument;
+  const doc = iframe?.contentDocument;
   const page = doc?.querySelector('.page.upd');
-  if (!page) return;
+  // Скрытая панель (вкладка на телефоне) имеет ширину 0 — пересчитаем, когда покажется.
+  if (!page || !iframe.clientWidth) return;
+  let style = doc.getElementById('fit-width');
+  if (!style) {
+    style = Object.assign(doc.createElement('style'), { id: 'fit-width' });
+    doc.head.append(style);
+  }
+  style.textContent = '';
   const zoom = Math.min(1, (iframe.clientWidth - 24) / (page.offsetWidth + 2));
-  const style = doc.createElement('style');
   style.textContent = `@media screen { html { zoom: ${zoom.toFixed(3)}; } }`;
-  doc.head.append(style);
 }
 
 /**

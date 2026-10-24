@@ -163,11 +163,11 @@ function Bank({ party }) {
   );
 }
 
-export function Party({ party, title }) {
+export function Party({ party, title, id }) {
   const edit = useEdit();
   const kind = partyKind(party);
   return (
-    <Section title={title} badge={PARTY_KINDS[kind]}>
+    <Section id={id} title={title} badge={PARTY_KINDS[kind]}>
       <Segmented
         value={kind}
         options={Object.entries(PARTY_KINDS)}

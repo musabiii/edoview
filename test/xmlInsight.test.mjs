@@ -77,3 +77,18 @@ test('кириллица в сообщении парсера Chrome восст�
   assert.equal(fixMojibake(`tag mismatch: ${broken} line 5`), 'tag mismatch: СвПрод line 5');
   assert.equal(fixMojibake('Ошибка без порчи'), 'Ошибка без порчи');
 });
+
+test('замечания привязаны к разделам формы', () => {
+  const text = sample('upd-marking.xml')
+    .replace('ИННЮЛ="7701234560"', 'ИННЮЛ="7701234561"')
+    .replace('КолТов="3"', 'КолТов="4"')
+    .replace('ВремИнфПр="09.15.40"', 'ВремИнфПр="25.15.40"')
+    .replace(' ДатаДок="12.10.2026"', '');
+  const roots = elements(text, xmlLanguage.parser.parse(text));
+  const bySection = diagnostics(roots).map((d) => `${d.section}: ${d.message}`);
+  assert.ok(bySection.includes('buyer-0: Неверная контрольная сумма ИНН'), bySection.join('\n'));
+  assert.ok(bySection.includes('extra: Время в формате ЧЧ.ММ.СС'));
+  assert.ok(bySection.includes('doc: СвСчФакт: не заполнен обязательный атрибут ДатаДок'));
+  assert.ok(bySection.some((m) => m.startsWith('marking: Строка 1: 3 кода КИЗ')));
+  assert.ok(bySection.some((m) => m.startsWith('items: ')));
+});
