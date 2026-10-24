@@ -30,6 +30,25 @@ function useDebounced(value, ms) {
   return v;
 }
 
+const PANEL_KEY = 'edoview:editorHidden';
+
+/** Скрыта ли панель реквизитов — запоминаем в браузере (если хранилище доступно). */
+function readPanelHidden() {
+  try {
+    return localStorage.getItem(PANEL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function savePanelHidden(hidden) {
+  try {
+    localStorage.setItem(PANEL_KEY, hidden ? '1' : '0');
+  } catch {
+    // приватный режим и т.п. — просто не запоминаем
+  }
+}
+
 /** Длинное имя файла для уведомления: начало…конец. */
 const shortName = (s, n = 42) => (s.length > n ? `${s.slice(0, 22)}…${s.slice(-(n - 23))}` : s);
 
@@ -53,6 +72,7 @@ export function App() {
   const [tab, setTab] = useState('preview');
   const [pane, setPane] = useState('edit');
   const [banner, setBanner] = useState(true);
+  const [editorHidden, setEditorHidden] = useState(readPanelHidden);
   const [dialog, ask] = useDialog();
   const [toast, showToast] = useToast();
   const edited = useRef(false);
@@ -154,8 +174,15 @@ export function App() {
     'extra',
   ];
 
+  function toggleEditor(hidden) {
+    setEditorHidden(hidden);
+    savePanelHidden(hidden);
+    track('panel', { hidden });
+  }
+
   function go(id) {
     setPane('edit');
+    if (editorHidden) toggleEditor(false);
     // На узком экране редактор мог быть скрыт — ждём отрисовки.
     requestAnimationFrame(() => goToSection(id));
   }
@@ -228,7 +255,7 @@ export function App() {
         <SampleBanner onFile={(f) => loadFile(f, 'file')} onClose={() => setBanner(false)} />
       )}
 
-      <div class="workspace" data-pane={pane === 'edit' ? 'edit' : 'view'}>
+      <div class={`workspace${editorHidden ? ' editor-hidden' : ''}`} data-pane={pane === 'edit' ? 'edit' : 'view'}>
         <section class="editor" aria-label="Реквизиты">
           <SectionNav sections={sections} counts={counts} onGo={go} />
           <DocHeader parts={parts} />
@@ -247,6 +274,13 @@ export function App() {
 
         <section class="viewer" aria-label="Просмотр">
           <div class="desk-only viewer-tabs">
+            <button type="button" class={`small panel-toggle${editorHidden ? ' collapsed' : ''}`} aria-pressed={!editorHidden}
+              title={editorHidden ? 'Показать панель реквизитов' : 'Скрыть панель реквизитов — форма на всю ширину'}
+              onClick={() => toggleEditor(!editorHidden)}>
+              <Icon.panel size={16} />
+              {editorHidden ? 'Реквизиты' : 'Скрыть'}
+              {editorHidden && problems > 0 && <span class="count">{problems}</span>}
+            </button>
             <Segmented value={tab} options={[['preview', 'Печатная форма'], ['xml', 'XML']]} onChange={setView} />
           </div>
           {tab === 'preview'

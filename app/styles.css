@@ -210,8 +210,15 @@ textarea.code {
   height: calc(100dvh - var(--topbar-h) - 32px);
   display: flex; flex-direction: column; gap: 8px; min-width: 0;
 }
-.viewer-tabs .segmented { align-self: flex-start; }
-.viewer > .desk-only { display: block; }
+.viewer-tabs { display: flex !important; align-items: center; gap: 8px; }
+.panel-toggle { color: var(--muted); }
+.panel-toggle:hover { color: var(--text); }
+.panel-toggle.collapsed { color: var(--accent); border-color: var(--accent); }
+/* Панель реквизитов скрыта: просмотр на всю ширину (только на широком экране — на телефоне вкладки). */
+@media (min-width: 1001px) {
+  .workspace.editor-hidden { grid-template-columns: 1fr; }
+  .workspace.editor-hidden .editor { display: none; }
+}
 .encoding { margin: 0 4px 24px; }
 
 @media (max-width: 1000px) {
